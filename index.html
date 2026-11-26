@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Silog Meals POS System</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-badge">🍳</div>
+      <div>
+        <h1>SILOG MEALS POS</h1>
+        <p>Served with Special Fried Rice & Fried Egg</p>
+      </div>
+    </div>
+
+    <div class="topbar-actions">
+      <div class="sales-pill">
+        <span>Today's Sales:</span>
+        <strong id="dailySalesDisplay">₱0.00</strong>
+        <span class="order-count">(<span id="orderCountDisplay">0</span> orders)</span>
+      </div>
+      <button class="btn btn-outline" id="viewHistoryBtn">Sales History</button>
+    </div>
+  </header>
+
+  <main class="pos-layout">
+    <!-- LEFT: MENU PANEL -->
+    <section class="menu-section">
+      <div class="menu-controls">
+        <input
+          type="text"
+          id="searchInput"
+          placeholder="Search silog meal (e.g. Tapsilog, Tocilog)..."
+        />
+        <div class="filter-tabs" id="filterTabs">
+          <button class="tab active" data-filter="all">All (12)</button>
+          <button class="tab" data-filter="budget">₱45 - ₱60</button>
+          <button class="tab" data-filter="premium">₱75 - ₱90</button>
+        </div>
+      </div>
+
+      <div class="menu-grid" id="menuGrid">
+        <!-- Menu items rendered via JS -->
+      </div>
+    </section>
+
+    <!-- RIGHT: ORDER TICKET PANEL -->
+    <aside class="ticket-section">
+      <div class="ticket-header">
+        <div>
+          <h2>Current Order</h2>
+          <span class="order-number" id="orderNumberDisplay">Order #0001</span>
+        </div>
+        <button class="btn-text-danger" id="clearCartBtn">Clear All</button>
+      </div>
+
+      <div class="order-meta">
+        <div class="order-type-toggle">
+          <button class="type-btn active" data-type="Dine-In">Dine-In</button>
+          <button class="type-btn" data-type="Takeout">Takeout</button>
+        </div>
+        <input
+          type="text"
+          id="customerNameInput"
+          placeholder="Customer Name / Table # (Optional)"
+        />
+      </div>
+
+      <div class="cart-items" id="cartItems">
+        <div class="empty-cart">
+          <p>No meals selected yet.</p>
+          <small>Click any meal on the left to add to order.</small>
+        </div>
+      </div>
+
+      <div class="addons-bar">
+        <span>Quick Add-ons:</span>
+        <div class="addon-buttons">
+          <button class="addon-btn" data-name="Extra Fried Egg" data-price="15">+ Egg (₱15)</button>
+          <button class="addon-btn" data-name="Extra Fried Rice" data-price="20">+ Rice (₱20)</button>
+          <button class="addon-btn" data-name="Atchara / Vinegar" data-price="10">+ Atchara (₱10)</button>
+        </div>
+      </div>
+
+      <div class="ticket-footer">
+        <div class="summary-row">
+          <span>Subtotal</span>
+          <span id="subtotalDisplay">₱0.00</span>
+        </div>
+        <div class="summary-row">
+          <span>Discount (Senior/PWD 20%)</span>
+          <label class="switch">
+            <input type="checkbox" id="discountToggle" />
+            <span class="slider"></span>
+          </label>
+        </div>
+        <div class="summary-row total-row">
+          <span>TOTAL</span>
+          <span id="totalDisplay">₱0.00</span>
+        </div>
+
+        <div class="payment-box">
+          <label for="cashInput">Cash Tendered (₱)</label>
+          <div class="cash-input-group">
+            <input type="number" id="cashInput" min="0" step="1" placeholder="0" />
+            <button class="exact-btn" id="exactCashBtn">Exact</button>
+          </div>
+          <div class="quick-cash">
+            <button class="cash-chip" data-cash="50">₱50</button>
+            <button class="cash-chip" data-cash="100">₱100</button>
+            <button class="cash-chip" data-cash="200">₱200</button>
+            <button class="cash-chip" data-cash="500">₱500</button>
+            <button class="cash-chip" data-cash="1000">₱1000</button>
+          </div>
+          <div class="change-row">
+            <span>Change:</span>
+            <strong id="changeDisplay">₱0.00</strong>
+          </div>
+        </div>
+
+        <button class="btn btn-primary checkout-btn" id="checkoutBtn" disabled>
+          Complete Order & Print Receipt
+        </button>
+      </div>
+    </aside>
+  </main>
+
+  <!-- RECEIPT MODAL -->
+  <div class="modal-overlay" id="receiptModal">
+    <div class="modal-card receipt-card">
+      <div id="printableReceipt" class="receipt-paper">
+        <div class="receipt-center">
+          <h3>SILOG MEALS</h3>
+          <p>Special Fried Rice & Fried Egg</p>
+          <p class="receipt-meta" id="recDate"></p>
+          <p class="receipt-meta" id="recOrderInfo"></p>
+        </div>
+        <hr />
+        <div id="recItemsList" class="rec-items"></div>
+        <hr />
+        <div class="rec-totals">
+          <div class="rec-line"><span>Subtotal:</span><span id="recSubtotal"></span></div>
+          <div class="rec-line" id="recDiscountRow" style="display: none;">
+            <span>Discount (20%):</span><span id="recDiscount"></span>
+          </div>
+          <div class="rec-line bold"><span>TOTAL:</span><span id="recTotal"></span></div>
+          <div class="rec-line"><span>Cash:</span><span id="recCash"></span></div>
+          <div class="rec-line bold"><span>Change:</span><span id="recChange"></span></div>
+        </div>
+        <hr />
+        <div class="receipt-center">
+          <p>Salamat po! Kain na!</p>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn btn-outline" onclick="window.print()">🖨️ Print Receipt</button>
+        <button class="btn btn-primary" id="newOrderBtn">Next Customer</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- SALES HISTORY MODAL -->
+  <div class="modal-overlay" id="historyModal">
+    <div class="modal-card history-card">
+      <div class="modal-header">
+        <h3>Today's Completed Orders</h3>
+        <button class="close-modal" id="closeHistoryBtn">&times;</button>
+      </div>
+      <div class="history-list" id="historyList"></div>
+      <div class="modal-actions">
+        <button class="btn btn-danger" id="resetSalesBtn">Reset Daily Sales</button>
+        <button class="btn btn-primary" id="closeHistoryBtn2">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const MENU_ITEMS = [
+      { id: 1, name: "Tapsilog", price: 90, desc: "Beef Tapa + Fried Rice + Egg", icon: "🥩" },
+      { id: 2, name: "Porksilog", price: 90, desc: "Marinated Porkchop + Fried Rice + Egg", icon: "🍖" },
+      { id: 3, name: "Chicsilog", price: 85, desc: "Crispy Fried Chicken + Fried Rice + Egg", icon: "🍗" },
+      { id: 4, name: "Hungariansilog", price: 85, desc: "Hungarian Sausage + Fried Rice + Egg", icon: "🌭" },
+      { id: 5, name: "Bangsilog", price: 75, desc: "Marinated Boneless Bangus + Fried Rice + Egg", icon: "🐟" },
+      { id: 6, name: "Tocilog", price: 60, desc: "Sweet Pork Tocino + Fried Rice + Egg", icon: "🥓" },
+      { id: 7, name: "Hotsilog", price: 60, desc: "Jumbo Hotdog + Fried Rice + Egg", icon: "🌭" },
+      { id: 8, name: "Footlongsilog", price: 60, desc: "Footlong Sausage + Fried Rice + Egg", icon: "🥖" },
+      { id: 9, name: "Hamsilog", price: 60, desc: "Sweet Sliced Ham + Fried Rice + Egg", icon: "🍖" },
+      { id: 10, name: "Skinlessilog", price: 45, desc: "Skinless Longganisa + Fried Rice + Egg", icon: " sausages" },
+      { id: 11, name: "Embosilog", price: 45, desc: "Filipino Embutido + Fried Rice + Egg", icon: " slices" },
+      { id: 12, name: "Siomai Rice", price: 45, desc: "4pcs Pork/Beef Siomai + Special Fried Rice", icon: "🥟" }
+    ];
+
+    // Fix clean icons for items 10 & 11
+    MENU_ITEMS[9].icon = "🌭";
+    MENU_ITEMS[10].icon = "🧆";
+
+    let cart = [];
+    let orderType = "Dine-In";
+    let currentFilter = "all";
+    let salesHistory = JSON.parse(localStorage.getItem("silog_sales_history")) || [];
+
+    const menuGrid = document.getElementById("menuGrid");
+    const cartItemsEl = document.getElementById("cartItems");
+    const searchInput = document.getElementById("searchInput");
+    const subtotalDisplay = document.getElementById("subtotalDisplay");
+    const totalDisplay = document.getElementById("totalDisplay");
+    const cashInput = document.getElementById("cashInput");
+    const changeDisplay = document.getElementById("changeDisplay");
+    const checkoutBtn = document.getElementById("checkoutBtn");
+    const discountToggle = document.getElementById("discountToggle");
+
+    function formatPeso(amount) {
+      return "₱" + amount.toFixed(2);
+    }
+
+    function updateHeaderStats() {
+      const totalSales = salesHistory.reduce((sum, order) => sum + order.total, 0);
+      document.getElementById("dailySalesDisplay").textContent = formatPeso(totalSales);
+      document.getElementById("orderCountDisplay").textContent = salesHistory.length;
+      const nextNum = String(salesHistory.length + 1).padStart(4, "0");
+      document.getElementById("orderNumberDisplay").textContent = `Order #${nextNum}`;
+    }
+
+    function renderMenu() {
+      const query = searchInput.value.toLowerCase();
+      const filtered = MENU_ITEMS.filter((item) => {
+        const matchesSearch = item.name.toLowerCase().includes(query);
+        if (currentFilter === "budget") return matchesSearch && item.price <= 60;
+        if (currentFilter === "premium") return matchesSearch && item.price >= 75;
+        return matchesSearch;
+      });
+
+      menuGrid.innerHTML = filtered
+        .map(
+          (item) => `
+          <div class="menu-card" onclick="addToCart('${item.name}', ${item.price})">
+            <div class="menu-card-top">
+              <span class="meal-icon">${item.icon}</span>
+              <span class="meal-price">₱${item.price}</span>
+            </div>
+            <h3>${item.name}</h3>
+            <p>${item.desc}</p>
+            <button class="add-indicator">+ Add to Order</button>
+          </div>
+        `
+        )
+        .join("");
+    }
+
+    function addToCart(name, price) {
+      const existing = cart.find((item) => item.name === name);
+      if (existing) {
+        existing.qty += 1;
+      } else {
+        cart.push({ name, price, qty: 1, note: "" });
+      }
+      renderCart();
+    }
+
+    function updateQty(index, delta) {
+      cart[index].qty += delta;
+      if (cart[index].qty <= 0) {
+        cart.splice(index, 1);
+      }
+      renderCart();
+    }
+
+    function updateNote(index, value) {
+      cart[index].note = value;
+    }
+
+    function calculateTotals() {
+      const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+      const discount = discountToggle.checked ? subtotal * 0.2 : 0;
+      const total = subtotal - discount;
+      const cash = parseFloat(cashInput.value) || 0;
+      const change = cash - total;
+
+      subtotalDisplay.textContent = formatPeso(subtotal);
+      totalDisplay.textContent = formatPeso(total);
+
+      if (cart.length > 0 && cash >= total) {
+        changeDisplay.textContent = formatPeso(change);
+        changeDisplay.style.color = "#15803d";
+        checkoutBtn.disabled = false;
+      } else {
+        changeDisplay.textContent = cash > 0 ? "Insufficient Cash" : "₱0.00";
+        changeDisplay.style.color = cash > 0 ? "#dc2626" : "#1f2937";
+        checkoutBtn.disabled = true;
+      }
+
+      return { subtotal, discount, total, cash, change };
+    }
+
+    function renderCart() {
+      if (cart.length === 0) {
+        cartItemsEl.innerHTML = `
+          <div class="empty-cart">
+            <p>No meals selected yet.</p>
+            <small>Click any meal on the left to add to order.</small>
+          </div>
+        `;
+      } else {
+        cartItemsEl.innerHTML = cart
+          .map(
+            (item, idx) => `
+            <div class="cart-item">
+              <div class="cart-item-main">
+                <div>
+                  <strong>${item.name}</strong>
+                  <div class="item-unit-price">₱${item.price} each</div>
+                </div>
+                <div class="qty-controls">
+                  <button onclick="updateQty(${idx}, -1)">−</button>
+                  <span>${item.qty}</span>
+                  <button onclick="updateQty(${idx}, 1)">+</button>
+                </div>
+                <div class="item-subtotal">₱${(item.price * item.qty).toFixed(2)}</div>
+              </div>
+              <input
+                type="text"
+                class="item-note-input"
+                placeholder="Note (e.g. sunny side up, extra garlic)..."
+                value="${item.note}"
+                oninput="updateNote(${idx}, this.value)"
+              />
+            </div>
+          `
+          )
+          .join("");
+      }
+      calculateTotals();
+    }
+
+    // Event Listeners
+    searchInput.addEventListener("input", renderMenu);
+
+    document.querySelectorAll(".tab").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".tab").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentFilter = btn.dataset.filter;
+        renderMenu();
+      });
+    });
+
+    document.querySelectorAll(".type-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".type-btn").forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        orderType = btn.dataset.type;
+      });
+    });
+
+    document.querySelectorAll(".addon-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        addToCart(btn.dataset.name, parseFloat(btn.dataset.price));
+      });
+    });
+
+    document.querySelectorAll(".cash-chip").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        cashInput.value = btn.dataset.cash;
+        calculateTotals();
+      });
+    });
+
+    document.getElementById("exactCashBtn").addEventListener("click", () => {
+      const { total } = calculateTotals();
+      if (total > 0) {
+        cashInput.value = total;
+        calculateTotals();
+      }
+    });
+
+    cashInput.addEventListener("input", calculateTotals);
+    discountToggle.addEventListener("change", calculateTotals);
+
+    document.getElementById("clearCartBtn").addEventListener("click", () => {
+      cart = [];
+      cashInput.value = "";
+      discountToggle.checked = false;
+      renderCart();
+    });
+
+    // Checkout & Receipt
+    checkoutBtn.addEventListener("click", () => {
+      const { subtotal, discount, total, cash, change } = calculateTotals();
+      const orderNum = String(salesHistory.length + 1).padStart(4, "0");
+      const customer = document.getElementById("customerNameInput").value.trim() || "Walk-in";
+      const timestamp = new Date().toLocaleString();
+
+      const completedOrder = {
+        orderNum,
+        customer,
+        orderType,
+        timestamp,
+        items: JSON.parse(JSON.stringify(cart)),
+        subtotal,
+        discount,
+        total,
+        cash,
+        change
+      };
+
+      salesHistory.push(completedOrder);
+      localStorage.setItem("silog_sales_history", JSON.stringify(salesHistory));
+      updateHeaderStats();
+
+      // Populate Receipt
+      document.getElementById("recDate").textContent = timestamp;
+      document.getElementById("recOrderInfo").textContent = `Order #${orderNum} • ${orderType} • ${customer}`;
+      document.getElementById("recItemsList").innerHTML = completedOrder.items
+        .map(
+          (i) => `
+          <div class="rec-line">
+            <span>${i.qty}x ${i.name} ${i.note ? `(${i.note})` : ""}</span>
+            <span>${formatPeso(i.price * i.qty)}</span>
+          </div>
+        `
+        )
+        .join("");
+
+      document.getElementById("recSubtotal").textContent = formatPeso(subtotal);
+      if (discount > 0) {
+        document.getElementById("recDiscountRow").style.display = "flex";
+        document.getElementById("recDiscount").textContent = "-" + formatPeso(discount);
+      } else {
+        document.getElementById("recDiscountRow").style.display = "none";
+      }
+      document.getElementById("recTotal").textContent = formatPeso(total);
+      document.getElementById("recCash").textContent = formatPeso(cash);
+      document.getElementById("recChange").textContent = formatPeso(change);
+
+      document.getElementById("receiptModal").classList.add("open");
+    });
+
+    document.getElementById("newOrderBtn").addEventListener("click", () => {
+      document.getElementById("receiptModal").classList.remove("open");
+      cart = [];
+      cashInput.value = "";
+      document.getElementById("customerNameInput").value = "";
+      discountToggle.checked = false;
+      renderCart();
+    });
+
+    // Sales History Modal
+    document.getElementById("viewHistoryBtn").addEventListener("click", () => {
+      const listEl = document.getElementById("historyList");
+      if (salesHistory.length === 0) {
+        listEl.innerHTML = `<p class="empty-history">No orders completed yet today.</p>`;
+      } else {
+        listEl.innerHTML = salesHistory
+          .slice()
+          .reverse()
+          .map(
+            (o) => `
+            <div class="history-item">
+              <div class="history-top">
+                <strong>Order #${o.orderNum} (${o.orderType})</strong>
+                <span class="history-total">${formatPeso(o.total)}</span>
+              </div>
+              <small>${o.timestamp} • Customer: ${o.customer}</small>
+              <p>${o.items.map((i) => `${i.qty}x ${i.name}`).join(", ")}</p>
+            </div>
+          `
+          )
+          .join("");
+      }
+      document.getElementById("historyModal").classList.add("open");
+    });
+
+    document.getElementById("closeHistoryBtn").addEventListener("click", () => {
+      document.getElementById("historyModal").classList.remove("open");
+    });
+    document.getElementById("closeHistoryBtn2").addEventListener("click", () => {
+      document.getElementById("historyModal").classList.remove("open");
+    });
+
+    document.getElementById("resetSalesBtn").addEventListener("click", () => {
+      if (confirm("Are you sure you want to clear today's sales history?")) {
+        salesHistory = [];
+        localStorage.removeItem("silog_sales_history");
+        updateHeaderStats();
+        document.getElementById("historyModal").classList.remove("open");
+      }
+    });
+
+    // Init
+    updateHeaderStats();
+    renderMenu();
+    renderCart();
+  </script>
+</body>
+</html>
